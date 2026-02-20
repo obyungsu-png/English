@@ -17,6 +17,7 @@ export const router = createBrowserRouter(
         { index: true, Component: BlogList },
         { path: "post/:id", Component: PostDetail },
         { path: "write", Component: PostEditor },
+        { path: "edit/:id", Component: PostEditor },
       ],
     },
   ],

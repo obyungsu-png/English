@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
-import { PenSquare, Search, GraduationCap, Upload, X, ChevronDown, Loader2 } from "lucide-react";
+import { PenSquare, Search, GraduationCap, Upload, X, ChevronDown, Loader2, Lock, Unlock, LogOut } from "lucide-react";
 import { NAV_TABS, AP_SUBCATEGORIES, BlogProvider, useBlog } from "./blog-context";
 import { useState, useRef, useEffect } from "react";
 
@@ -22,10 +22,14 @@ function BlogLayoutInner() {
   const currentCategory = params.get("category") || "전체";
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { qrImageUrl, setQrImage } = useBlog();
+  const { qrImageUrl, setQrImage, isAdmin, adminLogin, adminLogout } = useBlog();
   const qrInputRef = useRef<HTMLInputElement>(null);
   const [apDropdownOpen, setApDropdownOpen] = useState(false);
   const apDropdownRef = useRef<HTMLDivElement>(null);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
 
   // Close AP dropdown when clicking outside
   useEffect(() => {
@@ -66,6 +70,20 @@ function BlogLayoutInner() {
       setQrImage(ev.target?.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleAdminLogin = async () => {
+    if (!adminPassword.trim()) return;
+    setAdminLoading(true);
+    setAdminError("");
+    const ok = await adminLogin(adminPassword);
+    setAdminLoading(false);
+    if (ok) {
+      setShowAdminModal(false);
+      setAdminPassword("");
+    } else {
+      setAdminError("비밀번호가 올바르지 않습니다.");
+    }
   };
 
   const isHome = location.pathname === "/";
@@ -196,6 +214,26 @@ function BlogLayoutInner() {
                 <PenSquare className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">글쓰기</span>
               </button>
+              {isAdmin && (
+                <button
+                  onClick={adminLogout}
+                  className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-full transition-colors"
+                  style={{ fontSize: "0.8rem", fontWeight: 600 }}
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">로그아웃</span>
+                </button>
+              )}
+              {!isAdmin && (
+                <button
+                  onClick={() => setShowAdminModal(true)}
+                  className="flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white px-3.5 py-1.5 rounded-full transition-colors"
+                  style={{ fontSize: "0.8rem", fontWeight: 600 }}
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">관리자 로그인</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -349,6 +387,61 @@ function BlogLayoutInner() {
           </div>
         </div>
       </footer>
+
+      {/* Admin Login Modal */}
+      {showAdminModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Lock className="w-5 h-5 text-blue-600" />
+              <h2 className="text-gray-900" style={{ fontSize: "1.1rem", fontWeight: 700 }}>관리자 로그인</h2>
+            </div>
+            <input
+              type="password"
+              autoFocus
+              value={adminPassword}
+              onChange={(e) => {
+                setAdminPassword(e.target.value);
+                setAdminError("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAdminLogin();
+              }}
+              placeholder="비밀번호를 입력하세요"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-700 placeholder-gray-400 focus:outline-none focus:border-blue-400 mb-3"
+              style={{ fontSize: "0.9rem" }}
+            />
+            {adminError && (
+              <p className="text-red-500 mb-3" style={{ fontSize: "0.82rem" }}>{adminError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowAdminModal(false);
+                  setAdminPassword("");
+                  setAdminError("");
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                style={{ fontSize: "0.85rem", fontWeight: 500 }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAdminLogin}
+                disabled={adminLoading || !adminPassword.trim()}
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white transition-colors"
+                style={{ fontSize: "0.85rem", fontWeight: 600 }}
+              >
+                {adminLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {adminLoading ? "확인 중..." : "로그인"}
+              </button>
+            </div>
+            <p className="text-gray-400 text-center mt-3" style={{ fontSize: "0.72rem" }}>
+              초기 비밀번호: academy2026
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

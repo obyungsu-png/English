@@ -96,6 +96,59 @@ async function enrichPost(post: any) {
 // ── Health ──
 app.get(`${PREFIX}/health`, (c) => c.json({ status: "ok" }));
 
+// ── ADMIN ──
+
+const DEFAULT_ADMIN_PASSWORD = "academy2026";
+
+// Verify admin password
+app.post(`${PREFIX}/admin/verify`, async (c) => {
+  try {
+    const { password } = await c.req.json();
+    if (!password) return c.json({ error: "Password required" }, 400);
+
+    let storedPassword = await kv.get("blog:admin_password");
+    if (!storedPassword) {
+      // First time: set default password
+      await kv.set("blog:admin_password", DEFAULT_ADMIN_PASSWORD);
+      storedPassword = DEFAULT_ADMIN_PASSWORD;
+    }
+
+    if (password !== storedPassword) {
+      return c.json({ error: "Invalid password", ok: false }, 401);
+    }
+
+    return c.json({ ok: true });
+  } catch (err) {
+    console.log("POST /admin/verify error:", err);
+    return c.json({ error: `Admin verify failed: ${err}` }, 500);
+  }
+});
+
+// Change admin password
+app.put(`${PREFIX}/admin/password`, async (c) => {
+  try {
+    const { currentPassword, newPassword } = await c.req.json();
+    if (!currentPassword || !newPassword) {
+      return c.json({ error: "Both currentPassword and newPassword required" }, 400);
+    }
+
+    let storedPassword = await kv.get("blog:admin_password");
+    if (!storedPassword) {
+      storedPassword = DEFAULT_ADMIN_PASSWORD;
+    }
+
+    if (currentPassword !== storedPassword) {
+      return c.json({ error: "Current password incorrect" }, 401);
+    }
+
+    await kv.set("blog:admin_password", newPassword);
+    return c.json({ ok: true });
+  } catch (err) {
+    console.log("PUT /admin/password error:", err);
+    return c.json({ error: `Password change failed: ${err}` }, 500);
+  }
+});
+
 // ── POSTS ──
 
 // GET all posts
@@ -205,6 +258,49 @@ app.delete(`${PREFIX}/posts/:id`, async (c) => {
   } catch (err) {
     console.log("DELETE /posts/:id error:", err);
     return c.json({ error: `Failed to delete post: ${err}` }, 500);
+  }
+});
+
+// UPDATE post
+app.put(`${PREFIX}/posts/:id`, async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const { title, content, category, mediaData, mediaType } = body;
+
+    const post = await kv.get(`blog:post:${id}`);
+    if (!post) return c.json({ error: "Post not found" }, 404);
+
+    // Update fields
+    if (title) post.title = title;
+    if (content) post.content = content;
+    if (category) post.category = category;
+
+    // Handle media update
+    if (mediaData && mediaType) {
+      // Delete old media
+      if (post.mediaPath) {
+        await deleteStorage(post.mediaPath);
+      }
+      const ext = mediaType === "video" ? "mp4" : "jpg";
+      const mediaPath = `posts/${id}/media.${ext}`;
+      await uploadBase64(mediaData, mediaPath);
+      post.mediaPath = mediaPath;
+      post.mediaType = mediaType;
+    } else if (mediaData === null && post.mediaPath) {
+      // Explicitly removing media
+      await deleteStorage(post.mediaPath);
+      post.mediaPath = null;
+      post.mediaType = null;
+    }
+
+    await kv.set(`blog:post:${id}`, post);
+
+    const enriched = await enrichPost(post);
+    return c.json({ post: enriched });
+  } catch (err) {
+    console.log("PUT /posts/:id error:", err);
+    return c.json({ error: `Failed to update post: ${err}` }, 500);
   }
 });
 

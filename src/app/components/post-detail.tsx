@@ -15,6 +15,7 @@ import {
   Check,
   Link2,
   Download,
+  Pencil,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast, Toaster } from "sonner";
@@ -32,6 +33,7 @@ export default function PostDetail() {
     qrImageUrl,
     refreshPost,
     loading,
+    isAdmin,
   } = useBlog();
   const navigate = useNavigate();
 
@@ -395,16 +397,26 @@ export default function PostDetail() {
         )}
 
         {/* Actions */}
-        <div className="flex justify-end pb-6 border-b border-gray-100">
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 transition-colors"
-            style={{ fontSize: "0.8rem" }}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            삭제
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex justify-end gap-3 pb-6 border-b border-gray-100">
+            <button
+              onClick={() => navigate(`/edit/${post.id}`)}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-blue-500 transition-colors"
+              style={{ fontSize: "0.8rem" }}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              편집
+            </button>
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 transition-colors"
+              style={{ fontSize: "0.8rem" }}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              삭제
+            </button>
+          </div>
+        )}
       </article>
 
       {/* ── Comments ── */}

@@ -58,6 +58,9 @@ export const CATEGORIES = ["전체", ...POST_CATEGORIES];
 interface BlogContextType {
   posts: Post[];
   loading: boolean;
+  isAdmin: boolean;
+  adminLogin: (password: string) => Promise<boolean>;
+  adminLogout: () => void;
   addPost: (post: {
     title: string;
     content: string;
@@ -65,6 +68,16 @@ interface BlogContextType {
     mediaData: string | null;
     mediaType: "image" | "video" | null;
   }) => Promise<string>;
+  updatePost: (
+    id: string,
+    post: {
+      title: string;
+      content: string;
+      category: string;
+      mediaData: string | null;
+      mediaType: "image" | "video" | null;
+    }
+  ) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
   addComment: (
     postId: string,
@@ -95,6 +108,9 @@ export function BlogProvider({ children }: { children: ReactNode }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    return localStorage.getItem("blog_admin") === "true";
+  });
 
   // ── Initial fetch ──
   useEffect(() => {
@@ -135,6 +151,23 @@ export function BlogProvider({ children }: { children: ReactNode }) {
       const newPost = await api.createPost(post);
       setPosts((prev) => [newPost, ...prev]);
       return newPost.id;
+    },
+    []
+  );
+
+  const updatePost = useCallback(
+    async (
+      id: string,
+      post: {
+        title: string;
+        content: string;
+        category: string;
+        mediaData: string | null;
+        mediaType: "image" | "video" | null;
+      }
+    ): Promise<void> => {
+      const updated = await api.updatePost(id, post);
+      setPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
     },
     []
   );
@@ -274,6 +307,20 @@ export function BlogProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const adminLogin = useCallback(async (password: string) => {
+    const ok = await api.verifyAdmin(password);
+    if (ok) {
+      setIsAdmin(true);
+      localStorage.setItem("blog_admin", "true");
+    }
+    return ok;
+  }, []);
+
+  const adminLogout = useCallback(() => {
+    setIsAdmin(false);
+    localStorage.removeItem("blog_admin");
+  }, []);
+
   // ── QR Image ──
   const setQrImage = useCallback(async (dataUri: string | null) => {
     if (dataUri) {
@@ -298,7 +345,11 @@ export function BlogProvider({ children }: { children: ReactNode }) {
       value={{
         posts,
         loading,
+        isAdmin,
+        adminLogin,
+        adminLogout,
         addPost,
+        updatePost,
         deletePost,
         addComment,
         deleteComment,

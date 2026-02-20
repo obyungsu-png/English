@@ -54,6 +54,30 @@ export async function createPost(post: {
   return normalizePost(data.post);
 }
 
+export async function updatePost(
+  id: string,
+  post: {
+    title: string;
+    content: string;
+    category: string;
+    mediaData: string | null;
+    mediaType: "image" | "video" | null;
+  }
+): Promise<Post> {
+  const res = await fetch(`${BASE}/posts/${id}`, {
+    method: "PUT",
+    headers: headers(),
+    body: JSON.stringify(post),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("updatePost error:", err);
+    throw new Error(err);
+  }
+  const data = await res.json();
+  return normalizePost(data.post);
+}
+
 export async function deletePostApi(id: string): Promise<void> {
   const res = await fetch(`${BASE}/posts/${id}`, {
     method: "DELETE",
@@ -177,6 +201,33 @@ export async function deleteQrImage(): Promise<void> {
     const err = await res.text();
     console.error("deleteQr error:", err);
   }
+}
+
+// ── Admin ──
+
+export async function verifyAdmin(password: string): Promise<boolean> {
+  const res = await fetch(`${BASE}/admin/verify`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  return data.ok === true;
+}
+
+export async function changeAdminPassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<boolean> {
+  const res = await fetch(`${BASE}/admin/password`, {
+    method: "PUT",
+    headers: headers(),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  return data.ok === true;
 }
 
 // ── Normalize post shape ──
