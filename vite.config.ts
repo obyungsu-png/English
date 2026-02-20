@@ -3,10 +3,15 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
+// GitHub Actions 환경 자동 감지 → base 경로 설정
+// GITHUB_REPOSITORY = "obyungsu-png/English" → repo = "English"
+const repo = process.env.GITHUB_REPOSITORY?.split('/')[1]
+const base = repo ? `/${repo}/` : '/'
+
 export default defineConfig({
-  // Figma Make 미리보기에서는 '/'로 동작
-  // GitHub Pages 배포 시 deploy.yml에서 --base=/yantai/ 를 전달하여 빌드
-  base: '/',
+  // Figma Make: base = '/'
+  // GitHub Pages: base = '/English/' (자동 감지)
+  base,
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them
