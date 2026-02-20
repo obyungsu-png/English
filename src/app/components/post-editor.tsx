@@ -110,12 +110,12 @@ export default function PostEditor() {
     }
   }, [isEditMode, existingPost, initialized]);
 
-  // Redirect non-admin from edit mode
+  // Redirect non-admin (write & edit are admin-only)
   useEffect(() => {
-    if (isEditMode && !isAdmin) {
+    if (!isAdmin) {
       navigate("/");
     }
-  }, [isEditMode, isAdmin, navigate]);
+  }, [isAdmin, navigate]);
 
   const closeAllPickers = useCallback(() => {
     setShowSizePicker(false);

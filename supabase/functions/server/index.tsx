@@ -21,6 +21,11 @@ app.use(
 const BUCKET_NAME = "make-65e03572-blog-media";
 const PREFIX = "/make-server-65e03572";
 
+// ── Site config ──
+const SITE_URL = "https://obyungsu-png.github.io/English";
+const SITE_NAME = "세계로 아카데미 블로그";
+const DEFAULT_OG_IMAGE = "https://images.unsplash.com/photo-1659070953831-dd4fa16222fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200&q=80";
+
 // ── Supabase client helper ──
 function supabase() {
   return createClient(
@@ -95,6 +100,114 @@ async function enrichPost(post: any) {
 
 // ── Health ──
 app.get(`${PREFIX}/health`, (c) => c.json({ status: "ok" }));
+
+// ── OG SHARE (Link Preview for KakaoTalk, Facebook, Twitter, etc.) ──
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+app.get(`${PREFIX}/share/:postId`, async (c) => {
+  try {
+    const postId = c.req.param("postId");
+    const post = await kv.get(`blog:post:${postId}`);
+
+    // Default fallback if post not found
+    if (!post) {
+      const html = `<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta property="og:title" content="${SITE_NAME}">
+        <meta property="og:description" content="AP · TOEFL · SAT 전문 영어 학원">
+        <meta property="og:image" content="${DEFAULT_OG_IMAGE}">
+        <meta property="og:url" content="${SITE_URL}">
+        <meta http-equiv="refresh" content="0;url=${SITE_URL}">
+      </head><body><script>window.location.href="${SITE_URL}";</script></body></html>`;
+      return c.html(html);
+    }
+
+    // Build OG data
+    const title = escapeHtml(post.title);
+    const description = escapeHtml(stripHtml(post.content).slice(0, 200));
+    const canonicalUrl = `${SITE_URL}/post/${postId}`;
+    const category = escapeHtml(post.category);
+
+    // Get image URL
+    let ogImage = DEFAULT_OG_IMAGE;
+    if (post.mediaPath && post.mediaType === "image") {
+      const signed = await getSignedUrl(post.mediaPath);
+      if (signed) ogImage = signed;
+    }
+
+    const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} - ${SITE_NAME}</title>
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="${SITE_NAME}">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="[${category}] ${description}">
+  <meta property="og:image" content="${ogImage}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:locale" content="ko_KR">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="[${category}] ${description}">
+  <meta name="twitter:image" content="${ogImage}">
+
+  <!-- Redirect to actual page -->
+  <meta http-equiv="refresh" content="0;url=${canonicalUrl}">
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f8fafc; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); max-width: 480px; overflow: hidden; text-align: center; }
+    .card img { width: 100%; height: 200px; object-fit: cover; }
+    .card .body { padding: 24px; }
+    .card h1 { font-size: 1.2rem; color: #1f2937; margin: 0 0 8px; }
+    .card p { font-size: 0.85rem; color: #6b7280; line-height: 1.6; margin: 0 0 16px; }
+    .card .badge { display: inline-block; background: #eff6ff; color: #2563eb; font-size: 0.75rem; font-weight: 600; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; }
+    .card a { color: #2563eb; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+    .spinner { color: #9ca3af; font-size: 0.8rem; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="${ogImage}" alt="${title}">
+    <div class="body">
+      <span class="badge">${category}</span>
+      <h1>${title}</h1>
+      <p>${description.slice(0, 120)}${description.length > 120 ? "..." : ""}</p>
+      <a href="${canonicalUrl}">글 읽기 →</a>
+      <p class="spinner">페이지로 이동 중...</p>
+    </div>
+  </div>
+  <script>window.location.href="${canonicalUrl}";</script>
+</body>
+</html>`;
+
+    return c.html(html);
+  } catch (err) {
+    console.log("GET /share/:postId error:", err);
+    // Fallback redirect
+    return c.redirect(`${SITE_URL}`);
+  }
+});
 
 // ── ADMIN ──
 

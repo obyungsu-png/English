@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router";
 import { useBlog, formatDate } from "./blog-context";
+import { getOgShareUrl } from "./api";
 import {
   ChevronLeft,
   Trash2,
@@ -66,7 +67,62 @@ export default function PostDetail() {
     if (id) refreshPost(id);
   }, [id, refreshPost]);
 
-  const getShareUrl = useCallback(() => window.location.href, []);
+  // Dynamic meta tags for SEO & link previews
+  useEffect(() => {
+    if (!post) return;
+
+    const stripHtml = (html: string) => {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || "";
+    };
+
+    const description = `[${post.category}] ${stripHtml(post.content).slice(0, 160)}`;
+
+    document.title = `${post.title} - 세계로 아카데미 블로그`;
+
+    const setMeta = (property: string, content: string) => {
+      let el = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.querySelector(`meta[name="${property}"]`) as HTMLMetaElement | null;
+      }
+      if (!el) {
+        el = document.createElement("meta");
+        if (property.startsWith("og:") || property.startsWith("article:")) {
+          el.setAttribute("property", property);
+        } else {
+          el.setAttribute("name", property);
+        }
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    setMeta("og:type", "article");
+    setMeta("og:site_name", "세계로 아카데미 블로그");
+    setMeta("og:title", post.title);
+    setMeta("og:description", description);
+    setMeta("og:url", window.location.href);
+    if (post.mediaUrl && post.mediaType === "image") {
+      setMeta("og:image", post.mediaUrl);
+    }
+    setMeta("twitter:card", "summary_large_image");
+    setMeta("twitter:title", post.title);
+    setMeta("twitter:description", description);
+
+    return () => {
+      document.title = "세계로 아카데미 블로그";
+    };
+  }, [post]);
+
+  // Share URL = OG-enriched server URL (shows card preview on KakaoTalk, iMessage, etc.)
+  const getShareUrl = useCallback(() => {
+    if (id) return getOgShareUrl(id);
+    return window.location.href;
+  }, [id]);
+
+  // Direct page URL (for QR code - goes directly to the page)
+  const getDirectUrl = useCallback(() => window.location.href, []);
 
   const handleCopyLink = async () => {
     const url = getShareUrl();
@@ -283,6 +339,9 @@ export default function PostDetail() {
                     <Link2 className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
                     링크 복사
                   </p>
+                  <p className="text-gray-400 mb-2" style={{ fontSize: "0.72rem" }}>
+                    이 링크를 카카오톡, iMessage 등에 붙여넣으면 제목·내용·사진이 카드로 표시됩니다.
+                  </p>
                   <div className="flex items-center gap-2 mb-3">
                     <input
                       type="text"
@@ -337,7 +396,7 @@ export default function PostDetail() {
                   <div className="bg-white p-3 rounded-xl border border-gray-200">
                     <QRCodeSVG
                       id="page-qr-svg"
-                      value={getShareUrl()}
+                      value={getDirectUrl()}
                       size={120}
                       level="M"
                       bgColor="#ffffff"
@@ -521,12 +580,14 @@ export default function PostDetail() {
                       >
                         <CornerDownRight className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => deleteComment(post.id, comment.id)}
-                        className="text-gray-300 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => deleteComment(post.id, comment.id)}
+                          className="text-gray-300 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <p
@@ -570,14 +631,16 @@ export default function PostDetail() {
                                 {formatDate(reply.createdAt)}
                               </span>
                             </div>
-                            <button
-                              onClick={() =>
-                                deleteReply(post.id, comment.id, reply.id)
-                              }
-                              className="text-gray-300 hover:text-red-400 transition-colors"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() =>
+                                  deleteReply(post.id, comment.id, reply.id)
+                                }
+                                className="text-gray-300 hover:text-red-400 transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
                           <p
                             className="text-gray-600"

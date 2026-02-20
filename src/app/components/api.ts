@@ -8,6 +8,11 @@ const headers = () => ({
   Authorization: `Bearer ${publicAnonKey}`,
 });
 
+/** Get OG-enriched share URL for a post (shows card preview on KakaoTalk, iMessage, etc.) */
+export function getOgShareUrl(postId: string): string {
+  return `${BASE}/share/${postId}`;
+}
+
 // ── Posts ──
 
 export async function fetchPosts(): Promise<Post[]> {

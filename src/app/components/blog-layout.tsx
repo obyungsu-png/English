@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
-import { PenSquare, Search, GraduationCap, Upload, X, ChevronDown, Loader2, Lock, Unlock, LogOut } from "lucide-react";
+import { PenSquare, Search, GraduationCap, Upload, X, ChevronDown, Loader2, Lock, LogOut, Shield } from "lucide-react";
 import { NAV_TABS, AP_SUBCATEGORIES, BlogProvider, useBlog } from "./blog-context";
 import { useState, useRef, useEffect } from "react";
 
@@ -206,32 +206,35 @@ function BlogLayoutInner() {
                   <Search className="w-4.5 h-4.5" />
                 </button>
               )}
-              <button
-                onClick={() => navigate("/write")}
-                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-full transition-colors"
-                style={{ fontSize: "0.8rem", fontWeight: 600 }}
-              >
-                <PenSquare className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">글쓰기</span>
-              </button>
+
+              {/* Admin: Write button */}
               {isAdmin && (
                 <button
-                  onClick={adminLogout}
-                  className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-full transition-colors"
+                  onClick={() => navigate("/write")}
+                  className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-full transition-colors"
                   style={{ fontSize: "0.8rem", fontWeight: 600 }}
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">로그아웃</span>
+                  <PenSquare className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">글쓰기</span>
                 </button>
               )}
-              {!isAdmin && (
+
+              {/* Admin toggle */}
+              {isAdmin ? (
+                <button
+                  onClick={adminLogout}
+                  className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  title="관리자 로그아웃"
+                >
+                  <Shield className="w-4 h-4" />
+                </button>
+              ) : (
                 <button
                   onClick={() => setShowAdminModal(true)}
-                  className="flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white px-3.5 py-1.5 rounded-full transition-colors"
-                  style={{ fontSize: "0.8rem", fontWeight: 600 }}
+                  className="p-2 text-gray-300 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors"
+                  title="관리자 로그인"
                 >
-                  <Lock className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">관리자 로그인</span>
+                  <Lock className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -334,7 +337,7 @@ function BlogLayoutInner() {
               </p>
             </div>
 
-            {/* QR Code Management */}
+            {/* QR Code Management - Admin Only for upload/delete, visible to all if QR exists */}
             <div className="flex flex-col items-center gap-2">
               {qrImageUrl ? (
                 <div className="relative">
@@ -343,14 +346,16 @@ function BlogLayoutInner() {
                     alt="QR Code"
                     className="w-24 h-24 rounded-lg border border-gray-200 object-contain bg-white p-1"
                   />
-                  <button
-                    onClick={() => setQrImage(null)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setQrImage(null)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
-              ) : (
+              ) : isAdmin ? (
                 <button
                   onClick={() => qrInputRef.current?.click()}
                   className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
@@ -363,7 +368,7 @@ function BlogLayoutInner() {
                     QR 등록
                   </span>
                 </button>
-              )}
+              ) : null}
               <input
                 ref={qrInputRef}
                 type="file"
@@ -371,12 +376,14 @@ function BlogLayoutInner() {
                 className="hidden"
                 onChange={handleQrUpload}
               />
-              <p
-                className="text-gray-400 text-center"
-                style={{ fontSize: "0.7rem" }}
-              >
-                QR코드로 상담 문의
-              </p>
+              {qrImageUrl && (
+                <p
+                  className="text-gray-400 text-center"
+                  style={{ fontSize: "0.7rem" }}
+                >
+                  QR코드로 상담 문의
+                </p>
+              )}
             </div>
           </div>
 
@@ -436,9 +443,6 @@ function BlogLayoutInner() {
                 {adminLoading ? "확인 중..." : "로그인"}
               </button>
             </div>
-            <p className="text-gray-400 text-center mt-3" style={{ fontSize: "0.72rem" }}>
-              초기 비밀번호: academy2026
-            </p>
           </div>
         </div>
       )}
