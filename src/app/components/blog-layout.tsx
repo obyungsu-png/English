@@ -223,18 +223,22 @@ function BlogLayoutInner() {
               {isAdmin ? (
                 <button
                   onClick={adminLogout}
-                  className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3.5 py-1.5 rounded-full transition-colors"
+                  style={{ fontSize: "0.8rem", fontWeight: 600 }}
                   title="관리자 로그아웃"
                 >
-                  <Shield className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">로그아웃</span>
                 </button>
               ) : (
                 <button
                   onClick={() => setShowAdminModal(true)}
-                  className="p-2 text-gray-300 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-800 text-white px-3.5 py-1.5 rounded-full transition-colors"
+                  style={{ fontSize: "0.8rem", fontWeight: 600 }}
                   title="관리자 로그인"
                 >
-                  <Lock className="w-4 h-4" />
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">관리자</span>
                 </button>
               )}
             </div>

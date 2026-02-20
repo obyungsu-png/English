@@ -211,7 +211,7 @@ app.get(`${PREFIX}/share/:postId`, async (c) => {
 
 // ── ADMIN ──
 
-const DEFAULT_ADMIN_PASSWORD = "academy2026";
+const DEFAULT_ADMIN_PASSWORD = "matanboy00";
 
 // Verify admin password
 app.post(`${PREFIX}/admin/verify`, async (c) => {
